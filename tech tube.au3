@@ -326,6 +326,21 @@ Func _PlayLoop($iCurrentIndex)
                     ExitLoop
                 EndIf
             EndIf
+
+            If _IsPressed("24", $dll) Then
+                _ReportStatus("Start of track")
+                $sAction = "RESTART"
+                ProcessClose($iPID_Play)
+                ExitLoop
+            EndIf
+
+            If _IsPressed("23", $dll) Then
+                _ReportStatus("End of track")
+                $sAction = "END"
+                ProcessClose($iPID_Play)
+                ExitLoop
+            EndIf
+            
             Sleep(50)
         WEnd
         
@@ -333,6 +348,17 @@ Func _PlayLoop($iCurrentIndex)
             $iCurrentIndex += 1
         ElseIf $sAction = "BACK" Then
             $iCurrentIndex -= 1
+        ElseIf $sAction = "RESTART" Then
+            ; Do nothing to index, loop repeats same video
+        ElseIf $sAction = "END" Then
+             ; Simulate end of track. In playlist, this usually means go next, 
+             ; but if you want it to just stop the player loop, use ExitLoop.
+             ; Based on "End of track", I will let it just loop to next if available or exit if end.
+             ; But standard behavior for "Stop" is often exit. 
+             ; However, "End of track" implies finishing listening. 
+             ; I will make it go to Next to keep flow, or ExitLoop if single play.
+             ; Assuming list play, let's treat it as Skip/Next essentially.
+             $iCurrentIndex += 1
         Else
             ExitLoop 
         EndIf
@@ -389,7 +415,29 @@ Func playmedia($url)
     GUICtrlSetData($mainform, "Tech Tube, Version " & $version)
 
     If $dlink <> "" Then
-        Run('"' & $FFPLAY_PATH & '" -autoexit -window_title "Tech Tube Player" -infbuf -x 640 -y 360 "' & $dlink & '"', @ScriptDir, @SW_SHOW)
+        Local $sCmd = '"' & $FFPLAY_PATH & '" -autoexit -window_title "Tech Tube Player" -infbuf -x 640 -y 360 "' & $dlink & '"'
+        Local $pid_play = Run($sCmd, @ScriptDir, @SW_SHOW)
+        
+        While ProcessExists($pid_play)
+            
+            If _IsPressed("24", $dll) Then ; HOME - Start of track (Restart)
+                _ReportStatus("Start of track")
+                ProcessClose($pid_play)
+                $pid_play = Run($sCmd, @ScriptDir, @SW_SHOW)
+                ; Wait key release
+                Do 
+                    Sleep(10) 
+                Until Not _IsPressed("24", $dll)
+            EndIf
+            
+            If _IsPressed("23", $dll) Then ; END - End of track (Stop)
+                _ReportStatus("End of track")
+                ProcessClose($pid_play)
+                ExitLoop
+            EndIf
+            
+            Sleep(50)
+        WEnd
     Else
         MsgBox(16, "Error", "Cannot get video stream from this link.")
     EndIf
@@ -397,6 +445,12 @@ EndFunc
 
 Func online_play($url)
     ShellExecute($url)
+EndFunc
+
+Func _ReportStatus($sText)
+    ToolTip($sText, 0, 0, "Info", 1)
+    Sleep(1000)
+    ToolTip("")
 EndFunc
 
 Func about()
