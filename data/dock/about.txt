@@ -1,0 +1,4 @@
+This is an application that can help you download videos or audio from you tube with many different formats
+We use the YT DLP and FFMPEG libraries to perform the download and use of audio
+I am anhloc lc boy, the creator of this software
+You can contact me via the Contact tab
